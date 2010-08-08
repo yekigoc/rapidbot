@@ -20,39 +20,62 @@ void vStartLocatorTask( unsigned portBASE_TYPE uxPriority )
 }
 /*-----------------------------------------------------------*/
 
-void loc_writecommand(unsigned char command, unsigned int snpcs, unsigned char leavenpcslow)
+void loc_writecommand(unsigned char command, unsigned int snpcs, unsigned char leavenpcslow, Pin * npcs, Pin * cdout, Pin * spck)
 {
-  Pin npcs = NPCS_LOC;
-  Pin cdout = CDOUT_LOC;
-  Pin spck = SPCK_LOC;
   portDISABLE_INTERRUPTS();
-  PIO_Clear (&spck);
+  PIO_Clear (spck);
   int i = 0;
   int j = 0;
   for (i=0; i<100; i++)
     asm("nop");
-  PIO_Clear (&npcs);
+  PIO_Clear (npcs);
   for (i=0; i<100; i++)
     asm("nop");
-  for (j=0; j<8; j++)
+  for (j=0; j<3; j++)
     {
-      PIO_Set (&spck);
-      if ((command & 1<<(7-j)))
-	PIO_Set (&cdout);
+      PIO_Set (spck);
+      if ((snpcs & 1<<(3-j)))
+	PIO_Set (cdout);
       else 
-	PIO_Clear (&cdout);
+	PIO_Clear (cdout);
       for (i=0; i<100; i++)
 	asm("nop");
-      PIO_Clear (&spck);
+      PIO_Clear (spck);
       for (i=0; i<100; i++)
 	asm("nop");
     }
-  PIO_Set (&spck);
+  for (j=0; j<8; j++)
+    {
+      PIO_Set (spck);
+      if ((command & 1<<(7-j)))
+	PIO_Set (cdout);
+      else 
+	PIO_Clear (cdout);
+      for (i=0; i<100; i++)
+	asm("nop");
+      PIO_Clear (spck);
+      for (i=0; i<100; i++)
+	asm("nop");
+    }
+  PIO_Set (spck);
   for (i=0; i<100; i++)
     asm("nop");
-if (leavenpcslow==0)
-    PIO_Set (&npcs);
- portENABLE_INTERRUPTS();
+  if (leavenpcslow==0)
+    PIO_Set (npcs);
+  portENABLE_INTERRUPTS();
+}
+
+//1 - output 1, 0 - input
+void arcontrol(unsigned char arnum, char state)
+{
+  if (arnum>7)
+    return;
+  Pin ar = {1 << arnum, AT91C_BASE_PIOA, AT91C_ID_PIOA, /*PIO_INPUT*/ PIO_OUTPUT_1, PIO_DEFAULT};
+  if (stat == 0)
+    {
+      ar.type = PIO_INPUT;
+    }
+  PIO_Configure(ar, PIO_LISTSIZE(ar));
 }
 
 void vLocatorTask( void *pvParameters )
@@ -155,19 +178,6 @@ void vLocatorTask( void *pvParameters )
   int octr = 0;
   for(;;)
     {
-      if (trspistat.padatachange == 1)
-	{
-	  switch (trspistat.paen)
-	    {
-	    case 1:
-	      PIO_Configure(pa7en, PIO_LISTSIZE(pa7en));
-	      break;
-	    default:
-	      PIO_Configure(pa7dis, PIO_LISTSIZE(pa7dis));
-	      break;
-	    }
-	  trspistat.padatachange = 0;
-	}
       if (octr%10 == 0)
 	{
 	  if (trspistat.leds[0].state == 1)
@@ -186,11 +196,8 @@ void vLocatorTask( void *pvParameters )
 	{
 	  if (trspistat.channels[i].ampchanged == 1)
 	    {
-	      if (i==5)
-		{
-		  loc_writecommand(trspistat.channels[i].amp, 3, 0);
-		  trspistat.channels[i].ampchanged =0;
-		}
+	      loc_writecommand(trspistat.channels[i].amp, i, 0);
+	      trspistat.channels[i].ampchanged =0;
 	    }
 	}
       if ( trspistat.processed == 0)

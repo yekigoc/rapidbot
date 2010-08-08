@@ -16,10 +16,6 @@
 #define PA8  {1 << 8, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
 //#define PA9  {1 << 9, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_OUTPUT_1, PIO_DEFAULT}
 #define PA10 {1 << 10, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}
-#define PA7en  {1 << 7, AT91C_BASE_PIOA, AT91C_ID_PIOA, /*PIO_INPUT*/ PIO_OUTPUT_1, PIO_DEFAULT}
-#define PA7dis  {1 << 7, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_INPUT, PIO_DEFAULT}
-#define PA4en  {1 << 4, AT91C_BASE_PIOA, AT91C_ID_PIOA, /*PIO_INPUT*/ PIO_OUTPUT_1, PIO_DEFAULT}
-#define PA4dis  {1 << 4, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_INPUT, PIO_DEFAULT}
 
 #define PIN_ADC_AD0 {1 << 17, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_INPUT, PIO_DEFAULT}        //adc0
 #define PIN_ADC_AD1 {1 << 18, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_INPUT, PIO_DEFAULT}        //adc1
@@ -28,15 +24,16 @@
 
 #define PINS_ADC PIN_ADC_AD0, PIN_ADC_AD1, PIN_ADC_AD2, PIN_ADC_AD3 // Pins ADC
 
-#define NPCS_LOC {1 << 4, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_OUTPUT_1, PIO_DEFAULT}         //locator amplifier npcs
+#define NPCS_LOC {1 << 9, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_OUTPUT_1, PIO_DEFAULT}         //locator amplifier npcs
 #define CDOUT_LOC {1 << 6, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_OUTPUT_0, PIO_DEFAULT}        //locator amplifier controller data out
-#define SPCK_LOC {1 << 9, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_OUTPUT_1, PIO_DEFAULT}         //locator amplifier clock
+#define SPCK_LOC {1 << 8, AT91C_BASE_PIOA, AT91C_ID_PIOA, PIO_OUTPUT_1, PIO_DEFAULT}         //locator amplifier clock
 
 #define PINS_LOC_AMP NPCS_LOC, CDOUT_LOC, SPCK_LOC // Pins for Locator Amplifier
 
 static const Pin pins[] = {
   //  PA6,
   PA7dis,
+  PA4dis,
   PA8,
   PA1,
   //  PA9,
