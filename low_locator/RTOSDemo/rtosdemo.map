@@ -167,7 +167,7 @@ LOAD locator/locator_task.o
 LOAD adc/adc.o
 LOAD tc/tc.o
 LOAD locator/locator.o
-LOAD /tmp/ccUThXr9.o
+LOAD /tmp/ccbhPStd.o
 LOAD /home/snegovick/dev/arm/usr/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/lib/thumb/interwork/libm.a
 LOAD /home/snegovick/dev/arm/usr/bin/../lib/gcc/arm-elf/4.0.2/thumb/interwork/libgcc.a
 LOAD /home/snegovick/dev/arm/usr/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/lib/thumb/interwork/libc.a
@@ -177,7 +177,7 @@ LOAD /home/snegovick/dev/arm/usr/bin/../lib/gcc/arm-elf/4.0.2/thumb/interwork/li
 
 startup         0x0000000000100000       0x44
  *(.startup)
- .startup       0x0000000000100000       0x44 /tmp/ccUThXr9.o
+ .startup       0x0000000000100000       0x44 /tmp/ccbhPStd.o
 
 prog            0x0000000000100044     0xc75c
  *(.text)
@@ -308,7 +308,7 @@ prog            0x0000000000100044     0xc75c
                 0x00000000001041ac                TC_Start
  .text          0x0000000000104260       0x18 locator/locator.o
                 0x0000000000104260                ConvHex2mV
- .text          0x0000000000104278       0xd0 /tmp/ccUThXr9.o
+ .text          0x0000000000104278       0xd0 /tmp/ccbhPStd.o
                 0x0000000000104278                start
                 0x0000000000104328                endless_loop
  .text          0x0000000000104348       0xc0 /home/snegovick/dev/arm/usr/bin/../lib/gcc/arm-elf/4.0.2/../../../../arm-elf/lib/thumb/interwork/libm.a(s_cos.o)
