@@ -1,11 +1,7 @@
-#include "compass.h"
+#include "locator.h"
 #include "FreeRTOS.h"
-#include "task.h"
 
-void 
-spiinit()
+unsigned int ConvHex2mV( unsigned int valueToConvert )
 {
-  extern void ( vADC_ISR_Wrapper )( void );
-  unsigned int id_channel;
+  return( (ADC_VREF * valueToConvert)/0x3FF);
 }
-

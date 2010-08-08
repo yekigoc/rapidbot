@@ -3,5 +3,5 @@ armv4_5 core_state arm
 flash probe 0
 flash erase 0 0 0
 flash protect 0 0 1 off
-flash write 0 RTOSDemo.bin 0x0
+flash write 0 rapidlocator.bin 0x0
 mww 0xfffffd08 0xa5000401

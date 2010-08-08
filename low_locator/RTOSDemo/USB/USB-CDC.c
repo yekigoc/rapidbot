@@ -73,6 +73,8 @@
 #include "descriptors.h"
 
 #include "common.h"
+#include <adc/adc.h>
+#include "locator/locator.h"
 
 #define usbNO_BLOCK ( ( portTickType ) 0 )
 
@@ -732,6 +734,10 @@ static void prvHandleStandardInterfaceRequest( xUSB_REQUEST *pxRequest )
 {
   unsigned portCHAR usStatus = 0xFF;
   int a = 0;
+  unsigned char numchannels;
+  unsigned short ampdata;
+  unsigned short chan;
+  unsigned short amp;
 
   switch( pxRequest->ucRequest )
     {
@@ -740,31 +746,66 @@ static void prvHandleStandardInterfaceRequest( xUSB_REQUEST *pxRequest )
       //LCDPutStr("h", 100, 20, SMALL, BLACK, WHITE);
       switch (pxRequest->usValue)
 	{
-	case 0x1: //getpwm
-	  prvSendControlData( ( unsigned portCHAR * ) &trspistat.pwmp, sizeof( trspistat.pwmp ), sizeof( trspistat.pwmp ), pdFALSE );
+	case 0x1:
+	  prvSendZLP();
+	  memcpy( &trspistat.channelread, pxControlRx.ucBuffer, sizeof( trspistat.channelread ) );
+	  if (trspistat.channelread >= LOC_NUMADCCHANNELS)
+	    trspistat.channelread = LOC_NUMADCCHANNELS-1;
 	  break;
 	case 0x2:
        	  //trspistat.pwmp.cyclechange = ;
 	  prvSendZLP();
-	  memcpy( &trspistat.pwmp, pxControlRx.ucBuffer, sizeof( trspistat.pwmp ) );
+
+	  memcpy( &ampdata, pxControlRx.ucBuffer, sizeof( ampdata ) );
+	  chan = ampdata & 0xFF;
+	  amp = ampdata >> 8;
+	  if (chan<LOC_NUMADCCHANNELS)
+	    {
+	      trspistat.channels[chan].amp = amp;
+	      trspistat.channels[chan].ampchanged = 1;
+	    }
 	  //prvSendControlData( ( unsigned portCHAR * ) &trspistat.dutycycle, sizeof( trspistat.dutycycle ), sizeof( trspistat.dutycycle ), pdFALSE );
 	  break;
 	case 0x3:
 	  prvSendControlData( ( unsigned portCHAR * ) &trspistat.counter, sizeof( trspistat.counter ), sizeof( trspistat.counter ), pdFALSE );
 	  break;
 	case 0x4:
-	  prvSendZLP();
-	  memcpy( &trspistat.leds, pxControlRx.ucBuffer, sizeof( trspistat.leds ) );
+	  numchannels = LOC_NUMADCCHANNELS;
+	  prvSendControlData( ( unsigned portCHAR * ) &numchannels, sizeof( numchannels ), sizeof( numchannels ), pdFALSE );
 	  break;
 	case 0x5:
-	  prvSendControlData( ( unsigned portCHAR * ) trspistat.adcvalue, sizeof( trspistat.adcvalue ), sizeof( trspistat.adcvalue ), pdFALSE );
+	  prvSendZLP();
+	  memcpy( &trspistat.channels[trspistat.channelread].part, pxControlRx.ucBuffer, sizeof( trspistat.channels[trspistat.channelread].part ) );
 	  break;
 	case 0x6:
-	  prvSendControlData( ( unsigned portCHAR * ) &trspistat.cmpp, sizeof( trspistat.cmpp ), sizeof( trspistat.cmpp ), pdFALSE );
+	  prvSendControlData( ( unsigned portCHAR * ) trspistat.channels[trspistat.channelread].adcbuf, 128, 128, pdFALSE ); //sending in two stages
+
 	  break;
-	  //case 0x7:
-	  //reserved for hall effect sensors
-	  //break;
+	case 0x7:
+	  prvSendControlData( ( unsigned portCHAR * ) &trspistat.usbdataready, sizeof( trspistat.usbdataready ), sizeof( trspistat.usbdataready ), pdFALSE );
+	  break;
+	case 0x8:
+	  //send channel amp
+	  prvSendControlData( ( unsigned portCHAR * ) &trspistat.channels[trspistat.channelread].amp, sizeof( trspistat.channels[trspistat.channelread].amp ), sizeof( trspistat.channels[trspistat.channelread].amp ), pdFALSE );
+	  break;
+	case 0x9:
+	  prvSendControlData( ( unsigned portCHAR * ) trspistat.channels[trspistat.channelread].fx, 128, 128, pdFALSE );
+	  trspistat.usbdataready = 0;
+	  break;
+	case 0xA:
+	  prvSendControlData( ( unsigned portCHAR * ) &trspistat.channels[trspistat.channelread].freqamount, sizeof(trspistat.channels[trspistat.channelread].freqamount), sizeof(trspistat.channels[trspistat.channelread].freqamount), pdFALSE );
+	  break;
+	case 0xB:
+	  prvSendZLP();
+	  memcpy( &trspistat.paen, pxControlRx.ucBuffer, sizeof( char ) );
+	  trspistat.padatachange = 1;
+	  break;
+	case 0xC:
+	  prvSendZLP();
+	  memcpy( &trspistat.pwmp, pxControlRx.ucBuffer, sizeof( trspistat.pwmp ) );
+	  break;	  
+
+
 	default:
 	  prvSendControlData( ( unsigned portCHAR * ) &usStatus, sizeof( usStatus ), sizeof( usStatus ), pdFALSE );
 	  break;

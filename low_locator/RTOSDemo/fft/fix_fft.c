@@ -1,3 +1,7 @@
+#include <fix_fft.h>
+#include <common.h>
+#include "FreeRTOS.h"
+
 /* fix_fft.c - Fixed-point in-place Fast Fourier Transform  */
 /*
   All data are fixed-point short integers, in which -32768
@@ -146,15 +150,18 @@ short Sinewave[N_WAVE-N_WAVE/4] = {
   optimization suited to a particluar DSP processor.
   Scaling ensures that result remains 16-bit.
 */
-inline short FIX_MPY(short a, short b)
+inline short FIX_MPY(short a, short b);
+
+
+short FIX_MPY(short a, short b)
 {
-	/* shift right one less bit (i.e. 15-1) */
-	int c = ((int)a * (int)b) >> 14;
-	/* last bit shifted out = rounding-bit */
-	b = c & 0x01;
-	/* last shift + rounding bit */
-	a = (c >> 1) + b;
-	return a;
+  /* shift right one less bit (i.e. 15-1) */
+  int c = ((int)a * (int)b) >> 14;
+  /* last bit shifted out = rounding-bit */
+  b = c & 0x01;
+  /* last shift + rounding bit */
+  a = (c >> 1) + b;
+  return a;
 }
 
 /*
