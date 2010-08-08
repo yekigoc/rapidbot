@@ -1,0 +1,109 @@
+README for fft-arm version 0.01
+(c)JDB [jdb@lartmaker.nl], 20040418.
+
+Disclaimer: It has been three years since I touched this code. Some parts
+are a tad hazy, so bear with me.
+
+*** Strongly suggested reading
+
+If you want to do anything at all with this code other than using the 
+existing FFT sizes, I'd suggest getting
+
+"Numerical Recipes in C" from Cambridge University Press. Buy it. Seriously. 
+I bought it when I was a starving undergrad, and still use it regularly. 
+Any reasonably  stocked technical bookstore should have it. Most libraries 
+have it, especially college libraries. Failing that, go to 
+http://www.library.cornell.edu/nr/bookcpdf.html and check out chapters 12 
+and 13 (and THEN go and buy the book).
+
+"Fast algorithms for digital signal processing" by Richard E. Blahut, 
+published by Addison-Wesley Publishing Company. The best book I could
+find on FFTs, although a bit heavy on the math side. 
+
+*** What is it ?
+
+This code is a very minimal set of functions for radix 4/5 complex fixed
+point in-place FFT routines, optimized for the DEC/Intel StrongARM. 
+
+Let's take that sentence apart.
+
+Minimal: All that's supported as of now are FFTs with size 20, 64 and 80.
+It just so happens that I wanted to do 80-point FFTs (for a 64-carrier
+OFDM system with 16 guard carriers, if you must know). The other sizes
+were convenient stepping stones.
+
+radix 4/5: It is a common misconception that FFTs only work on array 
+sizes which are a power of two. Fast Fourier Transforms can be applied to
+arrays of any size, although sizes which can be factorized into small 
+numbers work best. Two routines are at the core of the code, one to do 
+a radix-4 FFT and one to do a radix-5 FFT, with the restriction that
+the radix-5 FFT can only appear as the last stage. By chaining multiple
+stages of these FFT kernels together, any transform of size 4^m * 5^n, 
+where m>=0 and 0<=n<=1, can be handled. Adding a radix-2 stage so that
+all transforms of size 2^m * 5^n can be offered is left as an excersize
+to the reader (patches gladly accepted).
+
+complex: An FFT is in principle a transform from an array of complex
+numbers to an array of complex numbers. If your input data is real, see
+"Numerical Recipes" for ways arround this.
+
+fixed point: Most existing FFT libraries assume floating point data types.
+This only works well on a processor with a (fast) FPU, something the ARM
+processors lack. Going for fixed point data adds some complexity, mostly
+because of overflow in the intermediate stages (google for "fixed point
+overflow" if this means nothing to you). The fft-arm code is designed
+so that 12-bit numbers plus sign can be handled without overflow.
+
+in-place: the input array is overwritten by the output of the FFT.
+
+optimized for StrongARM: The core code (which lives in butterfly.c) may look 
+weird, but it is written in this format so that a C-compiler for ARM can
+directly translate each line into a single instruction, with optimal
+scheduling for StrongARM. It is optimized to make maximum use of the full
+ARM register set (to minimize loads/stores). Since it's all C code, a smart
+compiler can tune the scheduling for newer processors (like XScale), and 
+you can even test the functionality of the code on another architecture
+(like an x86 Linux box).
+
+
+*** Random hints
+
+Sorry, no makefile yet (patces gladly accepted). Compile for ARM with:
+
+arm-linux-gcc -O3 -march=armv4 -mtune=strongarm1100 -fomit-frame-pointer
+-o ffttest-arm radix4fft.c testfft.c testmain.c -lm
+
+Test on your native platform with:
+
+gcc -O3 -o ffttest-native radix4fft.c testfft.c testmain.c -lm
+
+These FFTs are normalized, which means that the energy of the input array
+is the same as the energy of the output array (Parseval's theorem, if
+memory serves me well). This normalization is required to avoid fixed point
+overflow, and IMHO it's generally a Good Thing anyway.
+
+As with all FFT routines, the output array is normally not in-order, but
+rather bit reversed (or more severely shuffled, in the case of a radix-5
+transform). The routine reorder_generic() in radix4fft.c fixes this, at
+the expense of some CPU time. If you don't care about the output ordering
+you can forego this step by removing reorder_generic (or changing the 
+#if 1 to #if 0).
+
+Want an inverse FFT ? If you look closely at the formula for the FFT,
+you'll see that the only difference between an FFT and its inverse is
+the sign in the exponent of e. This means that *by reordering the output
+alone* you can turn an FFT into its inverse. Again, it's been over three 
+years since I wrote this code, but have a look at TransTable in testmain.c
+for more hints. My gut feeling is that you need the "In-place IFFT table".
+
+Need more than 12 bits of resolution ? Keep in mind that the FFT is a 
+linear process, so you may be able to split the input data into high/low
+words and add it together afterwards. Then again, the quantization noise
+introduced by fixed point twiddle factors may drown out your low words.
+Try it and let me know.
+
+Lastly, these routines used to be over three times as fast as the ones
+in the Intel Performance Primitives library. However, that too was over
+three years ago, I no longer have access to the IPP libs, and maybe Intel
+have improved their code. Maybe.
+
