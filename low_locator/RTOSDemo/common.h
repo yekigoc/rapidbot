@@ -44,8 +44,8 @@ static const Pin pins[] = {
   PA1,
   //  PA9,
   PA10,
-  PINS_LOC_AMP
-  //  PINS_ADC
+  PINS_LOC_AMP,
+  PINS_ADC
 };
 
 #define MIN_DUTY_CYCLE 0
@@ -63,7 +63,7 @@ typedef struct
 #define LOC_NUMSAMPLES 64
 #define LOC_NUMADCCHANNELS 8
 #define LOC_NUMLEDS 1
-#define ALLOWED_MIN 1000
+#define ALLOWED_MIN 500
 #define ALLOWED_MAX 1200
 #define MIDDLEPOINT 1650
 #define LEFT_BORDER 20

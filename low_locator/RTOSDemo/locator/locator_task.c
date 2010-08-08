@@ -15,6 +15,8 @@ struct _chanparams
   Pin * cdout;
   Pin * spck;
   unsigned int snpcs;
+  char arstate;
+  char aroffset;
 };
 typedef struct _chanparams chanparams;
 
@@ -75,17 +77,25 @@ void loc_writecommand(unsigned char command, unsigned char leavenpcslow, chanpar
 }
 
 //1 - output 1, 0 - input
-void arcontrol(unsigned char arnum, char state)
+void arcontrol(chanparams *p)
 {
-  if (arnum>7)
-    return;
-  Pin ar = {1 << arnum, AT91C_BASE_PIOA, AT91C_ID_PIOA, /*PIO_INPUT*/ PIO_OUTPUT_1, PIO_DEFAULT};
-  if (state == 0)
+  Pin ar = {1 << p->aroffset, AT91C_BASE_PIOA, AT91C_ID_PIOA, /*PIO_INPUT*/ PIO_OUTPUT_1, PIO_DEFAULT};
+  if (p->arstate == 0)
     {
       ar.type = PIO_INPUT;
     }
   PIO_Configure(&ar, 1);
 }
+
+void togglear(chanparams *p)
+{
+  if (p->arstate == 1)
+    p->arstate = 0;
+  else
+    p->arstate = 1;
+  arcontrol(p->arstate);
+}
+
 
 void vLocatorTask( void *pvParameters )
 {
@@ -118,7 +128,8 @@ void vLocatorTask( void *pvParameters )
       locch[i].npcs = &npcs0;
       locch[i].cdout = &cdout;
       locch[i].spck = &spck;
-      locch[i].npcs = i;
+      locch[i].snpcs = i;
+      locch[i].arstate = 0;
     }
 
   for (;i<8;i++)
@@ -126,10 +137,20 @@ void vLocatorTask( void *pvParameters )
       locch[i].npcs = &npcs1;
       locch[i].cdout = &cdout;
       locch[i].spck = &spck;
-      locch[i].npcs = i;
+      locch[i].snpcs = i;
     }
 
   i=0;
+
+  locch[0].aroffset = 21;
+  locch[1].aroffset = 16;
+  locch[2].aroffset = 15;
+  locch[3].aroffset = 14;
+  locch[4].aroffset = 13;
+  locch[5].aroffset = 12;
+  locch[6].aroffset = 11;
+  locch[5].aroffset = 10;
+
 
 
   unsigned char command = 0x0;
@@ -160,7 +181,7 @@ void vLocatorTask( void *pvParameters )
 		  BOARD_MCK,
 		  BOARD_ADC_FREQ,
 		  20,
-		  800);
+		  600);
   
 
   ADC_EnableChannel(AT91C_BASE_ADC, ADC_CHANNEL_0);
@@ -177,8 +198,7 @@ void vLocatorTask( void *pvParameters )
   AIC_EnableIT(AT91C_ID_ADC);
 
   ADC_EnableIt(AT91C_BASE_ADC,ADC_CHANNEL_0);
-  // Start measurement
-  ADC_StartConversion(AT91C_BASE_ADC);
+
 
   /// Configure TC for a 1s (= 1Hz) tick
   /*  if (TC_FindMckDivisor(390625, BOARD_MCK, &div, &tcclks)==1)
@@ -207,6 +227,10 @@ void vLocatorTask( void *pvParameters )
   trspistat.counter=0;
 		  
   int octr = 0;
+
+  // Start measurement
+  //  ADC_StartConversion(AT91C_BASE_ADC);
+
   for(;;)
     {
       if (octr%10 == 0)
@@ -227,7 +251,7 @@ void vLocatorTask( void *pvParameters )
 	{
 	  if (trspistat.channels[i].ampchanged == 1)
 	    {
-	      loc_writecommand(trspistat.channels[i].amp, 0, &(locch[i]));
+	      loc_writecommand(trspistat.channels[i].amp-1, 0, &(locch[i]));
 	      trspistat.channels[i].ampchanged = 0;
 	    }
 	}
@@ -253,20 +277,25 @@ void vLocatorTask( void *pvParameters )
 		    }
 		  trspistat.channels[i].fx[z] = in[z].r;
 		}
+
+	      if (trspistat.channels[i].freqamount < 2000)
+		{
+		  togglear(&(locch[i]));
+		}
 	      
 	      if (max>ALLOWED_MAX)
 		{
-		  if (trspistat.channels[i].amp>0)
+		  if (trspistat.channels[i].amp>8)
 		    {
-		      trspistat.channels[i].amp = trspistat.channels[i].amp - 1;
+		      trspistat.channels[i].amp = trspistat.channels[i].amp - 8;
 		      trspistat.channels[i].ampchanged = 1;
 		    }
 		}
 	      else if (max<ALLOWED_MIN)
 		{
-		  if (trspistat.channels[i].amp<15)
+		  if (trspistat.channels[i].amp<248)
 		    {
-		      trspistat.channels[i].amp = trspistat.channels[i].amp + 1;
+		      trspistat.channels[i].amp = trspistat.channels[i].amp + 8;
 		      trspistat.channels[i].ampchanged = 1;
 		    }
 		}
