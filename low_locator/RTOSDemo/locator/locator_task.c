@@ -9,6 +9,15 @@
 #define locatorSTACK_SIZE		(1024)
 #define SPI_PCS(npcs)       ((~(1 << npcs) & 0xF) << 16)
 
+struct _chanparams
+{
+  Pin * npcs;
+  Pin * cdout;
+  Pin * spck;
+  unsigned int snpcs;
+};
+typedef struct _chanparams chanparams;
+
 void vLocatorTask( void *pvParameters );
 
 /*-----------------------------------------------------------*/
@@ -20,48 +29,48 @@ void vStartLocatorTask( unsigned portBASE_TYPE uxPriority )
 }
 /*-----------------------------------------------------------*/
 
-void loc_writecommand(unsigned char command, unsigned int snpcs, unsigned char leavenpcslow, Pin * npcs, Pin * cdout, Pin * spck)
+void loc_writecommand(unsigned char command, unsigned char leavenpcslow, chanparams * p)
 {
   portDISABLE_INTERRUPTS();
-  PIO_Clear (spck);
+  PIO_Clear (p->spck);
   int i = 0;
   int j = 0;
   for (i=0; i<100; i++)
     asm("nop");
-  PIO_Clear (npcs);
+  PIO_Clear (p->npcs);
   for (i=0; i<100; i++)
     asm("nop");
   for (j=0; j<3; j++)
     {
-      PIO_Set (spck);
-      if ((snpcs & 1<<(3-j)))
-	PIO_Set (cdout);
+      PIO_Set (p->spck);
+      if ((p->snpcs & 1<<(2-j)))
+	PIO_Set (p->cdout);
       else 
-	PIO_Clear (cdout);
+	PIO_Clear (p->cdout);
       for (i=0; i<100; i++)
 	asm("nop");
-      PIO_Clear (spck);
+      PIO_Clear (p->spck);
       for (i=0; i<100; i++)
 	asm("nop");
     }
   for (j=0; j<8; j++)
     {
-      PIO_Set (spck);
+      PIO_Set (p->spck);
       if ((command & 1<<(7-j)))
-	PIO_Set (cdout);
+	PIO_Set (p->cdout);
       else 
-	PIO_Clear (cdout);
+	PIO_Clear (p->cdout);
       for (i=0; i<100; i++)
 	asm("nop");
-      PIO_Clear (spck);
+      PIO_Clear (p->spck);
       for (i=0; i<100; i++)
 	asm("nop");
     }
-  PIO_Set (spck);
+  PIO_Set (p->spck);
   for (i=0; i<100; i++)
     asm("nop");
   if (leavenpcslow==0)
-    PIO_Set (npcs);
+    PIO_Set (p->npcs);
   portENABLE_INTERRUPTS();
 }
 
@@ -71,11 +80,11 @@ void arcontrol(unsigned char arnum, char state)
   if (arnum>7)
     return;
   Pin ar = {1 << arnum, AT91C_BASE_PIOA, AT91C_ID_PIOA, /*PIO_INPUT*/ PIO_OUTPUT_1, PIO_DEFAULT};
-  if (stat == 0)
+  if (state == 0)
     {
       ar.type = PIO_INPUT;
     }
-  PIO_Configure(ar, PIO_LISTSIZE(ar));
+  PIO_Configure(&ar, 1);
 }
 
 void vLocatorTask( void *pvParameters )
@@ -95,13 +104,35 @@ void vLocatorTask( void *pvParameters )
   trspistat.channels[6].channel = ADC_CHANNEL_6;
   trspistat.channels[7].channel = ADC_CHANNEL_7;
   trspistat.processed = 1;
+
+  chanparams locch[8];
   
   int i = 0;
-  Pin npcs = NPCS_LOC;
+  Pin npcs0 = NPCS0_LOC;
+  Pin npcs1 = NPCS1_LOC;
+  Pin cdout = CDOUT_LOC;
+  Pin spck = SPCK_LOC;
+
+  for (;i<4;i++)
+    {
+      locch[i].npcs = &npcs0;
+      locch[i].cdout = &cdout;
+      locch[i].spck = &spck;
+      locch[i].npcs = i;
+    }
+
+  for (;i<8;i++)
+    {
+      locch[i].npcs = &npcs1;
+      locch[i].cdout = &cdout;
+      locch[i].spck = &spck;
+      locch[i].npcs = i;
+    }
+
+  i=0;
+
 
   unsigned char command = 0x0;
-
-  //  trspistat.compassstat = 1;
 
   //------------------------------------------------------------------------------
   /// Configures Timer Counter 0 (TC0) to generate an interrupt every second. This
@@ -196,8 +227,8 @@ void vLocatorTask( void *pvParameters )
 	{
 	  if (trspistat.channels[i].ampchanged == 1)
 	    {
-	      loc_writecommand(trspistat.channels[i].amp, i, 0);
-	      trspistat.channels[i].ampchanged =0;
+	      loc_writecommand(trspistat.channels[i].amp, 0, &(locch[i]));
+	      trspistat.channels[i].ampchanged = 0;
 	    }
 	}
       if ( trspistat.processed == 0)
